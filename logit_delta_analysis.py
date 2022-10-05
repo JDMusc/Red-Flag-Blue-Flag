@@ -15,20 +15,20 @@ import red_flag_blue_flag as rfbf
 
 
 def get_ixs_below_delta_cutoff(outcome, run, cutoff, f_name = 'test'):
-    vgg:dict = rfbf.load_vgg_dict(outcome, run, f_name)
+    zf:dict = rfbf.load_zf_dict(outcome, run, f_name)
 
     return [
-        flr_ix for flr_ix, flr_info in vgg.items()
+        flr_ix for flr_ix, flr_info in zf.items()
         if flr_info['meta']['logit_delta'] < cutoff
     ]
 
 
 def get_lowest_ix_delta(outcome, run,  f_name = 'test'):
-    vgg:dict = rfbf.load_vgg_dict(outcome, run, f_name)
+    zf:dict = rfbf.load_zf_dict(outcome, run, f_name)
 
     log_ds = [
         flr_info['meta']['logit_delta']
-        for _, flr_info in vgg.items()
+        for _, flr_info in zf.items()
     ]
 
     ix = np.argmin(log_ds)

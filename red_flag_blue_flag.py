@@ -1,5 +1,5 @@
 """
-Calculates VGG dict
+Calculates ZF dict
 """
 from enum import Enum
 from IPython.display import HTML
@@ -97,7 +97,7 @@ def get_flr_bias(i, cnn_model,
     return cnn_model.convolutions[lyr].bias[offset].detach()
 
 
-def _initialize_vgg(cnn_model, n_show = 3, n_flrs = 144, flrs_per_layer = 36,
+def _initialize_zf(cnn_model, n_show = 3, n_flrs = 144, flrs_per_layer = 36,
                     flr_ix_to_layer=default_flr_ix_to_layer):
     get_neg100 = lambda: np.repeat(-100., n_show)
     get_int0 = lambda: np.repeat(0, n_show)
@@ -125,7 +125,7 @@ def _initialize_vgg(cnn_model, n_show = 3, n_flrs = 144, flrs_per_layer = 36,
         for i in range(n_flrs)
     }
 
-def get_vgg_dict(cnn_model, dataset, numericize, ixs_to_tokens_fn,
+def get_zf_dict(cnn_model, dataset, numericize, ixs_to_tokens_fn,
                 n_show = 3, remove_count = 0, n_flrs = 144,
                 flr_ix_to_layer=default_flr_ix_to_layer,
                 flrs_per_layer = 36, kernel_sizes = None,
@@ -133,7 +133,7 @@ def get_vgg_dict(cnn_model, dataset, numericize, ixs_to_tokens_fn,
                 seq_len = 3000,
                 patient_label = 1):
     """
-    Return VGG Dictionary with a key for each filter
+    Return ZF Dictionary with a key for each filter
     """
     if kernel_sizes is None:
         kernel_sizes = [1, 2, 3, 5]
@@ -143,7 +143,7 @@ def get_vgg_dict(cnn_model, dataset, numericize, ixs_to_tokens_fn,
         cnn_model, cnn_xt_model, dataset,
         ixs_to_tokens_fn=ixs_to_tokens_fn)
 
-    ret = _initialize_vgg(cnn_model, n_show, n_flrs, flrs_per_layer)
+    ret = _initialize_zf(cnn_model, n_show, n_flrs, flrs_per_layer)
 
     n_samples = len(dataset) - remove_count
     logit_vals = np.zeros( (n_flrs, n_samples) )
@@ -232,18 +232,18 @@ def get_dataset_logits(
     return logit_vals
 
 
-def make_vgg_table(vgg_dict, rank_delta = False,
+def make_zf_table(zf_dict, rank_delta = False,
                     layer_lo = default_flr_ix_to_ngram.get, n_show = 3):
     """
-    returns HTML table from a VGG dictionary
+    returns HTML table from a ZF dictionary
     """
     def get_median_logit(flr_ix):
-        return np.median(vgg_dict[flr_ix]['sample_info']['net_logit'])
+        return np.median(zf_dict[flr_ix]['sample_info']['net_logit'])
 
     def get_delta_logit(flr_ix):
-        return vgg_dict[flr_ix]['meta']['logit_median_delta']
+        return zf_dict[flr_ix]['meta']['logit_median_delta']
 
-    n_filters = len(vgg_dict.keys())
+    n_filters = len(zf_dict.keys())
 
     rank_fn = get_delta_logit if rank_delta else get_median_logit
     logit_mets = np.array([rank_fn(_) for _ in range(n_filters)])
@@ -254,7 +254,7 @@ def make_vgg_table(vgg_dict, rank_delta = False,
         for _ in list(zip(range(n_filters - 1, half_flrs - 1, -1), range(half_flrs)))
     ]
 
-    flr_ix_to_tbl = lambda flr_ix, rank: _vgg_item_to_tbl_row(flr_ix, rank, vgg_dict,
+    flr_ix_to_tbl = lambda flr_ix, rank: _zf_item_to_tbl_row(flr_ix, rank, zf_dict,
                                     layer_lo=layer_lo, n_show=n_show)
 
     return HTML(
@@ -299,12 +299,12 @@ class DisplayMetric(Enum):
 
 class RankInput(Enum):
     """
-    Options for VGG to rank
+    Options for ZF to rank
     """
-    VGG_1 = 1
-    VGG_2 = 2
+    ZF_1 = 1
+    ZF_2 = 2
 
-def make_vggs_table(vgg_1, vgg_2,
+def make_zfs_table(zf_1, zf_2,
                     title,
                     rank_method:RankMethod = RankMethod.MEDIAN_LOGIT_DELTA,
                     display_metric:DisplayMetric = DisplayMetric.MEDIAN,
@@ -314,60 +314,60 @@ def make_vggs_table(vgg_1, vgg_2,
                     n_rows = None,
                     model1_name = 'Model 1',
                     model2_name = 'Model 2',
-                    vgg_rank_input:RankInput = RankInput.VGG_1
+                    zf_rank_input:RankInput = RankInput.ZF_1
                     ):
     """
-    return HTML table of 2 columns for comparison of 2 VGG dicts
+    return HTML table of 2 columns for comparison of 2 ZF dicts
     """
     if flr is None:
         flr = lambda value1, value2, flr_ix: True
 
-    def get_top_logits(vgg, flr_ix):
-        return vgg[flr_ix]['sample_info']['net_logit'][:n_show]
+    def get_top_logits(zf, flr_ix):
+        return zf[flr_ix]['sample_info']['net_logit'][:n_show]
 
-    def get_median_top_logits(vgg, flr_ix):
-        return np.median(get_top_logits(vgg, flr_ix))
+    def get_median_top_logits(zf, flr_ix):
+        return np.median(get_top_logits(zf, flr_ix))
     
     def get_meta_key_gen(k:str):
-        def get_meta_key(vgg, flr_ix):
-            return vgg[flr_ix]['meta'][k]
+        def get_meta_key(zf, flr_ix):
+            return zf[flr_ix]['meta'][k]
         return get_meta_key
 
-    rank_by_vgg_1 = vgg_rank_input is RankInput.VGG_1
-    rank_vgg = vgg_1 if rank_by_vgg_1 else vgg_2
+    rank_by_zf_1 = zf_rank_input is RankInput.ZF_1
+    rank_zf = zf_1 if rank_by_zf_1 else zf_2
     filter_ixs = d.p(
-        rank_vgg,
+        rank_zf,
         d.apply('keys'),
         list,
         np.array,
     )
 
-    def get_rankings(vgg):
+    def get_rankings(zf):
         if rank_method == RankMethod.MEDIAN_TOP_LOGITS:
             rank_fn = get_median_top_logits
         else:
             rank_fn = get_meta_key_gen(rank_method.name.lower())
 
-        logit_mets = np.array([rank_fn(vgg, _) for _ in filter_ixs])
+        logit_mets = np.array([rank_fn(zf, _) for _ in filter_ixs])
 
         return filter_ixs[np.flip(np.argsort(logit_mets))]
 
-    rankings_1 = get_rankings(vgg_1)
-    rankings_2 = get_rankings(vgg_2)
-    rankings = (rankings_1 if rank_by_vgg_1 else rankings_2)
+    rankings_1 = get_rankings(zf_1)
+    rankings_2 = get_rankings(zf_2)
+    rankings = (rankings_1 if rank_by_zf_1 else rankings_2)
     if n_rows is not None:
         rankings = rankings[:n_rows]
 
-    def flr_ix_to_cell(flr_ix, vgg_opt:int):
-        if vgg_opt == 1:
+    def flr_ix_to_cell(flr_ix, zf_opt:int):
+        if zf_opt == 1:
             rank = np.argmax(rankings_1 == flr_ix)
-            vgg = vgg_1
-        elif vgg_opt == 2:
+            zf = zf_1
+        elif zf_opt == 2:
             rank = np.argmax(rankings_2 == flr_ix)
-            vgg = vgg_2
+            zf = zf_2
         
-        return _vgg_item_to_tbl_row(
-            flr_ix, rank, vgg, layer_lo=layer_lo, n_show=n_show, display_metric=display_metric,
+        return _zf_item_to_tbl_row(
+            flr_ix, rank, zf, layer_lo=layer_lo, n_show=n_show, display_metric=display_metric,
         )
 
     rank_ttl = (
@@ -375,7 +375,7 @@ def make_vggs_table(vgg_1, vgg_2,
         if 'top' not in rank_method.name.lower()
         else f'Median of Top {n_show} Logits'
     )
-    rank_title = f'Ranked by {rank_ttl} ({model1_name if rank_by_vgg_1 else model2_name} Set)'
+    rank_title = f'Ranked by {rank_ttl} ({model1_name if rank_by_zf_1 else model2_name} Set)'
 
     return HTML(
         f"""
@@ -391,7 +391,7 @@ def make_vggs_table(vgg_1, vgg_2,
             {''.join(
                 [
                     f"<tr><td>{flr_ix_to_cell(flr_ix, 1)}</td><td>{flr_ix_to_cell(flr_ix, 2)}</td></tr>"
-                    for flr_ix in rankings if flr(vgg_1[flr_ix], vgg_2[flr_ix], flr_ix)
+                    for flr_ix in rankings if flr(zf_1[flr_ix], zf_2[flr_ix], flr_ix)
                 ])
             }
             </tr>
@@ -407,10 +407,10 @@ red_style = color_style("red")
 span_red = lambda txt: span_it(txt, red_style)
 span_blue = lambda txt: span_it(txt, blue_style)
 
-def _vgg_item_to_tbl_row(flr_ix, rank, vgg_dict,
+def _zf_item_to_tbl_row(flr_ix, rank, zf_dict,
                         layer_lo = default_flr_ix_to_ngram.get, n_show = 3,
                         display_metric=DisplayMetric.MEDIAN):
-    s_i = vgg_dict[flr_ix]['sample_info']
+    s_i = zf_dict[flr_ix]['sample_info']
     log_n_pats = lambda _: span_red(f'{s_i["logit_n_patients"][_]}x')
     log_n_cons = lambda _: span_blue(f'{s_i["logit_n_controls"][_]}x')
     sample_row = lambda _: f"""
@@ -423,7 +423,7 @@ def _vgg_item_to_tbl_row(flr_ix, rank, vgg_dict,
         ) </td></tr>
     """
 
-    meta = vgg_dict[flr_ix]['meta']
+    meta = zf_dict[flr_ix]['meta']
     imp_k = (meta['fc']*meta['w_norm'])
     sign = np.sign(meta['fc'])
     hdr_style= red_style if sign > 0 else blue_style
@@ -487,7 +487,7 @@ def make_logit_1d(logs):
     return logs.transpose(1, 0).reshape(logs.numel(), 1).numpy().flatten()
 
 
-def view_outliers(vgg_x, vgg_y, x_label = 'Train', y_label = 'Val', hue = None,
+def view_outliers(zf_x, zf_y, x_label = 'Train', y_label = 'Val', hue = None,
                     do_show_flr_ix = lambda x, y: x < 0 or y < 0,
                     meta_key = 'median_logit_delta',
                     meta_key_x = None,
@@ -503,10 +503,10 @@ def view_outliers(vgg_x, vgg_y, x_label = 'Train', y_label = 'Val', hue = None,
         meta_key_y = meta_key
 
     plot_df = d.p(
-        vgg_x,
+        zf_x,
         d.curry(get_meta_key, meta_key_x),
         d.curry(pd.DataFrame, columns = [x_label]),
-        d.mutate(**{y_label: get_meta_key(vgg_y, meta_key_y)}),
+        d.mutate(**{y_label: get_meta_key(zf_y, meta_key_y)}),
         d.mutate(x_lt0 = lambda _: _[x_label] < 0,
                 y_lt0 = lambda _: _[y_label] <= 0),
     )
@@ -525,8 +525,8 @@ def view_outliers(vgg_x, vgg_y, x_label = 'Train', y_label = 'Val', hue = None,
     return plt, d.p(plot_df, d.select([x_label, y_label]), d.apply('corr'))
 
 
-def get_meta_key(vgg, key = 'median_logit_delta'):
-    return [_['meta'][key] for _ in vgg.values()]
+def get_meta_key(zf, key = 'median_logit_delta'):
+    return [_['meta'][key] for _ in zf.values()]
 
 
 def get_preds(dataset, model, zero_ixs = None,
