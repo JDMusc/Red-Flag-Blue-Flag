@@ -400,10 +400,10 @@ def make_zfs_table(zf_1, zf_2,
     )
 
 span_it = lambda txt, stl: f'<span style="{stl}">{txt}</span>'
-BLUE = 'rgb(150, 75, 255)'
+BLUE = 'rgb(58, 142, 255)'
 color_style = lambda c: f"color:{c}"
 blue_style = color_style(BLUE)
-red_style = color_style("red")
+red_style = color_style("rgb(254, 100, 100)")
 span_red = lambda txt: span_it(txt, red_style)
 span_blue = lambda txt: span_it(txt, blue_style)
 
